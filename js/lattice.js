@@ -1,32 +1,54 @@
 /**
- * lattice.js — Immersive Silicon-28 Diamond Cubic Lattice
+ * lattice.js — Interactive Silicon-28 Multi-Qubit Lattice
  *
- * Smooth, beautiful dots with soft glow halos.
- * Quantum dot is proportionally larger (5x atom radius).
- * Real diamond cubic structure with thermal vibration from physics.
+ * FULLY INTERACTIVE:
+ *   - Tiny dot-like atoms that visibly vibrate with temperature
+ *   - Thermal vibration amplitude scales with kBT (physics-accurate)
+ *   - Qubit markers pulse, precess, and change color with spin state
+ *   - Exchange coupling lines animate between neighboring qubits
+ *   - B-field affects qubit precession speed
+ *   - Gate voltages affect local potential landscape visually
  */
 
 const Lattice = (() => {
-    const LATTICE_CONSTANT = 5.43; // Angstroms
-    const SCALE = 2.0;
-    const GRID = 1; // ±1 unit cells
-    const ATOM_RADIUS = 0.06; // small, smooth dots
-    const QD_RADIUS = 0.35;  // quantum dot — 5x larger
-    let group;
-    const atoms = [];
-    const bonds = [];
-    let qdMarker; // center quantum dot marker
+    const SCALE = 1.6;
+    const GRID = 4;
+    const ATOM_RADIUS = 0.018; // tiny dots
+    const FALLOFF_RADIUS = 5.5;
+    const QUBIT_RADIUS = 0.22;
+    const INTERACTION_DECAY = 2.5;
 
-    // Soft material palette
-    const ATOM_COLOR = 0x78909c;   // blue-grey 400
-    const BOND_COLOR = 0xcfd8dc;   // blue-grey 100
-    const QD_COLOR = 0x1a73e8;     // Google blue
-    const HALO_COLOR = 0xbbdefb;   // light blue 100
+    let group;
+    const atoms = []; // individual meshes for animation
+    const bonds = [];
+    let substratePlane;
+
+    // Multi-qubit system
+    const qubits = [];
+    let qubitIdCounter = 0;
+    let interactionGroup;
+    const interactionLines = [];
+    const QUBIT_SITES = [];
+
+    // Colors
+    const ATOM_COLOR = 0x90a4ae;
+    const BOND_COLOR = 0xcfd8dc;
+    const QUBIT_COLOR_0 = new THREE.Color(0x448aff); // |0⟩ blue
+    const QUBIT_COLOR_1 = new THREE.Color(0xff5252); // |1⟩ red
+    const QUBIT_GLOW_COLOR = new THREE.Color(0x82b1ff);
+    const INTERACTION_COLOR = new THREE.Color(0x00e5ff);
+
+    let scene_ref;
+    let currentDecoState = null;
+
+    // Shared geometries/materials for atoms
+    let atomGeo, bondGeo;
 
     function init(scene) {
+        scene_ref = scene;
         group = new THREE.Group();
+        interactionGroup = new THREE.Group();
 
-        // Diamond cubic basis (fractional coordinates)
         const basis = [
             [0, 0, 0], [0.5, 0.5, 0], [0.5, 0, 0.5], [0, 0.5, 0.5],
             [0.25, 0.25, 0.25], [0.75, 0.75, 0.25], [0.75, 0.25, 0.75], [0.25, 0.75, 0.75]
@@ -37,57 +59,62 @@ const Lattice = (() => {
             for (let iy = -GRID; iy <= GRID; iy++) {
                 for (let iz = -GRID; iz <= GRID; iz++) {
                     for (const b of basis) {
-                        positions.push({
-                            x: (ix + b[0]) * SCALE,
-                            y: (iy + b[1]) * SCALE,
-                            z: (iz + b[2]) * SCALE
-                        });
+                        const x = (ix + b[0]) * SCALE;
+                        const y = (iy + b[1]) * SCALE;
+                        const z = (iz + b[2]) * SCALE;
+                        const dist = Math.sqrt(x * x + y * y + z * z);
+                        positions.push({ x, y, z, dist });
                     }
                 }
             }
         }
 
-        // Smooth atom spheres — higher segment count for silky look
-        const sGeo = new THREE.SphereGeometry(ATOM_RADIUS, 16, 12);
-        const sMat = new THREE.MeshPhysicalMaterial({
-            color: ATOM_COLOR,
-            roughness: 0.8,
-            metalness: 0.0,
-            transparent: true,
-            opacity: 0.85
-        });
-
-        // Subtle halo for each atom (soft glow)
-        const hGeo = new THREE.SphereGeometry(ATOM_RADIUS * 2.5, 8, 6);
-        const hMat = new THREE.MeshBasicMaterial({
-            color: HALO_COLOR,
-            transparent: true,
-            opacity: 0.08,
-            depthWrite: false
-        });
-
-        for (const p of positions) {
-            // Main atom dot
-            const m = new THREE.Mesh(sGeo, sMat);
-            m.position.set(p.x, p.y, p.z);
-            group.add(m);
-
-            // Soft halo
-            const h = new THREE.Mesh(hGeo, hMat);
-            h.position.set(p.x, p.y, p.z);
-            group.add(h);
-
-            atoms.push({ mesh: m, halo: h, bx: p.x, by: p.y, bz: p.z });
+        // Generate qubit site candidates
+        for (let ix = -3; ix <= 3; ix++) {
+            for (let iz = -3; iz <= 3; iz++) {
+                const x = ix * SCALE;
+                const z = iz * SCALE;
+                const dist = Math.sqrt(x * x + z * z);
+                if (dist < FALLOFF_RADIUS * 1.2) {
+                    QUBIT_SITES.push(new THREE.Vector3(x, 0, z));
+                }
+            }
         }
 
-        // Bonds — thin, elegant lines connecting nearest neighbors
-        const nnDist = SCALE * 0.435; // nearest neighbor in diamond cubic
-        const cGeo = new THREE.CylinderGeometry(0.008, 0.008, 1, 4);
-        const cMat = new THREE.MeshBasicMaterial({
-            color: BOND_COLOR,
-            transparent: true,
-            opacity: 0.35
-        });
+        // ─── Individual atom meshes (for per-atom animation) ────
+        atomGeo = new THREE.SphereGeometry(ATOM_RADIUS, 6, 4);
+
+        for (const p of positions) {
+            const alpha = Math.exp(-(p.dist * p.dist) / (FALLOFF_RADIUS * FALLOFF_RADIUS));
+            if (alpha < 0.02) continue; // cull invisible atoms
+
+            const mat = new THREE.MeshBasicMaterial({
+                color: ATOM_COLOR,
+                transparent: true,
+                opacity: alpha * 0.9
+            });
+            const mesh = new THREE.Mesh(atomGeo, mat);
+            mesh.position.set(p.x, p.y, p.z);
+            group.add(mesh);
+
+            atoms.push({
+                mesh,
+                bx: p.x, by: p.y, bz: p.z,
+                dist: p.dist,
+                alpha,
+                // Per-atom random phase for vibration
+                phaseX: Math.random() * Math.PI * 2,
+                phaseY: Math.random() * Math.PI * 2,
+                phaseZ: Math.random() * Math.PI * 2,
+                freqX: 2 + Math.random() * 4,
+                freqY: 2 + Math.random() * 4,
+                freqZ: 2 + Math.random() * 4
+            });
+        }
+
+        // ─── Bonds ────
+        const nnDist = SCALE * 0.435;
+        bondGeo = new THREE.CylinderGeometry(0.004, 0.004, 1, 3);
         const up = new THREE.Vector3(0, 1, 0);
 
         for (let i = 0; i < positions.length; i++) {
@@ -97,6 +124,17 @@ const Lattice = (() => {
                 const dz = positions[i].z - positions[j].z;
                 const d = Math.sqrt(dx * dx + dy * dy + dz * dz);
                 if (d < nnDist && d > 0.01) {
+                    const midDist = (positions[i].dist + positions[j].dist) / 2;
+                    const alpha = Math.exp(-(midDist * midDist) / (FALLOFF_RADIUS * FALLOFF_RADIUS));
+                    if (alpha < 0.03) continue;
+
+                    const bMat = new THREE.MeshBasicMaterial({
+                        color: BOND_COLOR,
+                        transparent: true,
+                        opacity: alpha * 0.25
+                    });
+                    const bond = new THREE.Mesh(bondGeo, bMat);
+
                     const mid = new THREE.Vector3(
                         (positions[i].x + positions[j].x) / 2,
                         (positions[i].y + positions[j].y) / 2,
@@ -110,93 +148,342 @@ const Lattice = (() => {
                     const len = dir.length();
                     dir.normalize();
 
-                    const bond = new THREE.Mesh(cGeo, cMat);
                     bond.position.copy(mid);
                     bond.scale.set(1, len, 1);
                     bond.quaternion.setFromUnitVectors(up, dir);
                     group.add(bond);
-                    bonds.push(bond);
+                    bonds.push({ mesh: bond, iIdx: i, jIdx: j, alpha });
                 }
             }
         }
 
-        // Central quantum dot marker — proportionally larger
-        const qdGeo = new THREE.SphereGeometry(QD_RADIUS, 32, 24);
-        const qdMat = new THREE.MeshPhysicalMaterial({
-            color: QD_COLOR,
-            roughness: 0.3,
-            metalness: 0.1,
+        // ─── Translucent Substrate Plane ────
+        const planeGeo = new THREE.PlaneGeometry(28, 28);
+        const planeMat = new THREE.MeshPhysicalMaterial({
+            color: 0xe8eaf6,
             transparent: true,
-            opacity: 0.0, // starts invisible, fades in at stage 2
-            emissive: QD_COLOR,
-            emissiveIntensity: 0.1
-        });
-        qdMarker = new THREE.Mesh(qdGeo, qdMat);
-        qdMarker.position.set(0, 0, 0);
-        group.add(qdMarker);
-
-        // Quantum dot halo
-        const qdHaloGeo = new THREE.SphereGeometry(QD_RADIUS * 2, 16, 12);
-        const qdHaloMat = new THREE.MeshBasicMaterial({
-            color: QD_COLOR,
-            transparent: true,
-            opacity: 0.0,
+            opacity: 0.08,
+            roughness: 0.9,
+            metalness: 0.0,
+            side: THREE.DoubleSide,
             depthWrite: false
         });
-        qdMarker._halo = new THREE.Mesh(qdHaloGeo, qdHaloMat);
-        qdMarker._halo.position.set(0, 0, 0);
-        group.add(qdMarker._halo);
+        substratePlane = new THREE.Mesh(planeGeo, planeMat);
+        substratePlane.rotation.x = -Math.PI / 2;
+        substratePlane.position.y = -0.3;
+        group.add(substratePlane);
 
         scene.add(group);
-        console.log(`[Lattice] ${atoms.length} atoms, ${bonds.length} bonds, QD marker at origin`);
+        scene.add(interactionGroup);
+
+        // Add initial qubits
+        const initialPositions = [
+            [0, 0, 0], [1.6, 0, 0], [-1.6, 0, 0], [0, 0, 1.6], [0, 0, -1.6],
+            [1.6, 0, 1.6], [-1.6, 0, 1.6], [1.6, 0, -1.6], [-1.6, 0, -1.6],
+            [3.2, 0, 0], [0, 0, 3.2], [-3.2, 0, 0]
+        ];
+        for (const p of initialPositions) {
+            addQubit(new THREE.Vector3(p[0], p[1], p[2]));
+        }
+
+        console.log(`[Lattice] ${atoms.length} atoms, ${bonds.length} bonds, ${qubits.length} qubits`);
     }
 
+    // ─── Qubit Management ────
+    function addQubit(position) {
+        if (!scene_ref) return null;
+        const id = qubitIdCounter++;
+
+        // Qubit core — bright sphere
+        const qGeo = new THREE.SphereGeometry(QUBIT_RADIUS, 24, 18);
+        const qMat = new THREE.MeshPhysicalMaterial({
+            color: QUBIT_COLOR_0,
+            roughness: 0.15,
+            metalness: 0.1,
+            transparent: true,
+            opacity: 0.9,
+            emissive: QUBIT_COLOR_0,
+            emissiveIntensity: 0.5
+        });
+        const marker = new THREE.Mesh(qGeo, qMat);
+        marker.position.copy(position);
+        group.add(marker);
+
+        // Halo glow
+        const hGeo = new THREE.SphereGeometry(QUBIT_RADIUS * 2.5, 16, 12);
+        const hMat = new THREE.MeshBasicMaterial({
+            color: QUBIT_GLOW_COLOR,
+            transparent: true,
+            opacity: 0.15,
+            depthWrite: false
+        });
+        const halo = new THREE.Mesh(hGeo, hMat);
+        halo.position.copy(position);
+        group.add(halo);
+
+        // Outer diffuse shell
+        const gGeo = new THREE.SphereGeometry(QUBIT_RADIUS * 4, 12, 8);
+        const gMat = new THREE.MeshBasicMaterial({
+            color: QUBIT_GLOW_COLOR,
+            transparent: true,
+            opacity: 0.05,
+            depthWrite: false,
+            side: THREE.BackSide
+        });
+        const glow = new THREE.Mesh(gGeo, gMat);
+        glow.position.copy(position);
+        group.add(glow);
+
+        // Spin arrow (small arrow showing spin direction)
+        const arrowGeo = new THREE.ConeGeometry(0.06, 0.2, 8);
+        const arrowMat = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.8
+        });
+        const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+        arrow.position.copy(position);
+        arrow.position.y += QUBIT_RADIUS * 1.5;
+        group.add(arrow);
+
+        const qubit = {
+            id, position: position.clone(),
+            marker, halo, glow, arrow,
+            phase: Math.random() * Math.PI * 2,
+            spinAngle: 0 // precession angle
+        };
+        qubits.push(qubit);
+        rebuildInteractions();
+        return id;
+    }
+
+    function removeQubit(id) {
+        const idx = qubits.findIndex(q => q.id === id);
+        if (idx === -1) return false;
+        const q = qubits[idx];
+        group.remove(q.marker); group.remove(q.halo);
+        group.remove(q.glow); group.remove(q.arrow);
+        q.marker.geometry.dispose(); q.marker.material.dispose();
+        q.halo.geometry.dispose(); q.halo.material.dispose();
+        q.glow.geometry.dispose(); q.glow.material.dispose();
+        q.arrow.geometry.dispose(); q.arrow.material.dispose();
+        qubits.splice(idx, 1);
+        rebuildInteractions();
+        return true;
+    }
+
+    function removeLastQubit() {
+        if (qubits.length === 0) return false;
+        return removeQubit(qubits[qubits.length - 1].id);
+    }
+
+    function addQubitAtRandomSite() {
+        const occupied = new Set(qubits.map(q => `${q.position.x.toFixed(1)},${q.position.z.toFixed(1)}`));
+        const available = QUBIT_SITES.filter(s => !occupied.has(`${s.x.toFixed(1)},${s.z.toFixed(1)}`));
+        if (available.length === 0) return null;
+        const site = available[Math.floor(Math.random() * available.length)];
+        return addQubit(site);
+    }
+
+    // ─── Interaction Lines ────
+    function rebuildInteractions() {
+        for (const line of interactionLines) {
+            interactionGroup.remove(line);
+            line.geometry.dispose();
+            line.material.dispose();
+        }
+        interactionLines.length = 0;
+
+        for (let i = 0; i < qubits.length; i++) {
+            for (let j = i + 1; j < qubits.length; j++) {
+                const d = qubits[i].position.distanceTo(qubits[j].position);
+                if (d < SCALE * 4) {
+                    const strength = Math.exp(-d / INTERACTION_DECAY);
+                    if (strength < 0.05) continue;
+
+                    const points = [];
+                    const p1 = qubits[i].position;
+                    const p2 = qubits[j].position;
+                    const segments = 20;
+                    for (let s = 0; s <= segments; s++) {
+                        const t = s / segments;
+                        points.push(new THREE.Vector3(
+                            p1.x + (p2.x - p1.x) * t,
+                            p1.y + (p2.y - p1.y) * t + Math.sin(t * Math.PI) * 0.12 * strength,
+                            p1.z + (p2.z - p1.z) * t
+                        ));
+                    }
+
+                    const curve = new THREE.CatmullRomCurve3(points);
+                    const tubeGeo = new THREE.TubeGeometry(curve, 12, 0.015 + strength * 0.02, 5, false);
+                    const tubeMat = new THREE.MeshBasicMaterial({
+                        color: INTERACTION_COLOR,
+                        transparent: true,
+                        opacity: strength * 0.4,
+                        depthWrite: false
+                    });
+                    const tube = new THREE.Mesh(tubeGeo, tubeMat);
+                    tube._strength = strength;
+                    tube._qi = i;
+                    tube._qj = j;
+                    interactionGroup.add(tube);
+                    interactionLines.push(tube);
+                }
+            }
+        }
+    }
+
+    // ─── MAIN UPDATE — Everything animates here ────
     function update(dt, elapsed, decoState) {
         if (!group) return;
+        currentDecoState = decoState;
 
-        // Thermal vibration — real physics: <u²> ∝ kBT / (mω²)
-        // We use jitter from decoherence module (already physics-calibrated)
+        // ────────────────────────────────────────────────
+        // THERMAL VIBRATION — atoms physically move with temperature
+        // ────────────────────────────────────────────────
         const jitter = decoState ? decoState.jitter : 0;
-
-        // Gentle breathing for aesthetic
-        const breathe = 1 + Math.sin(elapsed * 0.3) * 0.002;
+        // Amplify vibration so it's clearly visible
+        // At 20mK: jitter ≈ 0, at 4000mK: jitter ≈ 0.15
+        // We scale up for visibility: 0 → 0, 0.15 → 0.5
+        const vibrationAmp = jitter * 3.5;
+        const noiseLevel = decoState ? decoState.noiseLevel : 0;
 
         for (const a of atoms) {
-            let jx = 0, jy = 0, jz = 0;
-            if (jitter > 0.001) {
-                // Brownian-like thermal motion
-                jx = (Math.random() - 0.5) * jitter;
-                jy = (Math.random() - 0.5) * jitter;
-                jz = (Math.random() - 0.5) * jitter;
+            if (vibrationAmp > 0.001) {
+                // Smooth sinusoidal vibration per atom (not random — looks better)
+                const jx = Math.sin(elapsed * a.freqX + a.phaseX) * vibrationAmp * (0.5 + a.dist * 0.02);
+                const jy = Math.sin(elapsed * a.freqY + a.phaseY) * vibrationAmp * (0.5 + a.dist * 0.02);
+                const jz = Math.sin(elapsed * a.freqZ + a.phaseZ) * vibrationAmp * (0.5 + a.dist * 0.02);
+                a.mesh.position.set(a.bx + jx, a.by + jy, a.bz + jz);
+            } else {
+                // Gentle breathing at low temp
+                const breathe = 1 + Math.sin(elapsed * 0.3) * 0.001;
+                a.mesh.position.set(a.bx * breathe, a.by * breathe, a.bz * breathe);
             }
-            a.mesh.position.set(
-                a.bx * breathe + jx,
-                a.by * breathe + jy,
-                a.bz * breathe + jz
+
+            // Atoms get warmer-colored at high temperature
+            if (noiseLevel > 0.01) {
+                const warmth = noiseLevel * 0.6;
+                const r = 0.565 + warmth * 0.4; // blue-grey → warm
+                const g = 0.643 - warmth * 0.15;
+                const b = 0.682 - warmth * 0.3;
+                a.mesh.material.color.setRGB(r, g, b);
+            }
+        }
+
+        // ────────────────────────────────────────────────
+        // QUBIT MARKERS — respond to spin state & temperature
+        // ────────────────────────────────────────────────
+        const spinState = typeof SpinPhysics !== 'undefined' ? SpinPhysics.getState() : null;
+        const p1 = spinState ? spinState.probUp : 0;
+        const theta = spinState ? spinState.theta : 0;
+        const phi = spinState ? spinState.phi : 0;
+
+        for (const q of qubits) {
+            // ── Spin-state color blend (|0⟩ blue → |1⟩ red) ──
+            const c = new THREE.Color();
+            c.lerpColors(QUBIT_COLOR_0, QUBIT_COLOR_1, p1);
+            q.marker.material.color.copy(c);
+            q.marker.material.emissive.copy(c);
+
+            // ── Precession animation ──
+            // Qubits precess around z-axis at Larmor frequency (visible rotation)
+            const larmorGHz = typeof SpinPhysics !== 'undefined' ? SpinPhysics.getLarmorGHz() : 28;
+            // Map to visible speed: scale down enormously but keep proportional
+            const precessionSpeed = larmorGHz * 0.08;
+            q.spinAngle += dt * precessionSpeed;
+
+            // Qubit oscillates position slightly (like a trapped particle)
+            const wobble = 0.03 + p1 * 0.05;
+            const wx = Math.sin(q.spinAngle + q.phase) * wobble;
+            const wz = Math.cos(q.spinAngle + q.phase) * wobble;
+            q.marker.position.set(q.position.x + wx, q.position.y, q.position.z + wz);
+            q.halo.position.copy(q.marker.position);
+            q.glow.position.copy(q.marker.position);
+
+            // ── Pulse/breathing ──
+            const pulse = 1 + Math.sin(elapsed * 2.5 + q.id * 0.7) * 0.08;
+            q.marker.scale.setScalar(pulse);
+            q.halo.scale.setScalar(pulse * 1.15);
+
+            // ── Halo brightness responds to coherence ──
+            const coherenceFactor = decoState ? Math.max(0.05, 1 - decoState.noiseLevel) : 1;
+            q.halo.material.opacity = 0.12 * coherenceFactor + Math.sin(elapsed * 3 + q.id) * 0.04;
+            q.glow.material.opacity = 0.04 * coherenceFactor;
+
+            // ── Emissive intensity changes with temperature ──
+            q.marker.material.emissiveIntensity = 0.3 + coherenceFactor * 0.4;
+
+            // ── Spin arrow direction ──
+            // Arrow tilts based on Bloch sphere angles
+            const arrowY = q.position.y + QUBIT_RADIUS * 1.3;
+            q.arrow.position.set(
+                q.marker.position.x,
+                arrowY + Math.cos(theta) * 0.1,
+                q.marker.position.z
             );
-            a.halo.position.copy(a.mesh.position);
+            q.arrow.rotation.z = theta - Math.PI; // tilt with spin
+            q.arrow.rotation.y = q.spinAngle; // precess
+
+            // Arrow color follows spin state
+            q.arrow.material.color.copy(c);
+
+            // ── Decoherence flicker ──
+            if (decoState && decoState.flicker > 0.1) {
+                const flick = 1 - decoState.flicker * Math.sin(elapsed * 20 + q.id * 3) * 0.3;
+                q.marker.material.opacity = 0.9 * flick;
+            } else {
+                q.marker.material.opacity = 0.9;
+            }
+
+            // ── Thermal broadening — qubit "smears" at high temp ──
+            if (noiseLevel > 0.1) {
+                const smear = 1 + noiseLevel * 0.4;
+                q.glow.scale.setScalar(pulse * smear * 1.2);
+            }
         }
 
-        // QD marker pulsing
-        if (qdMarker && qdMarker.material.opacity > 0.01) {
-            const pulse = 1 + Math.sin(elapsed * 2) * 0.05;
-            qdMarker.scale.setScalar(pulse);
-            if (qdMarker._halo) {
-                qdMarker._halo.scale.setScalar(pulse * 1.2);
-                qdMarker._halo.material.opacity = qdMarker.material.opacity * 0.15 * (0.8 + Math.sin(elapsed * 3) * 0.2);
+        // ────────────────────────────────────────────────
+        // INTERACTION LINES — animate with time
+        // ────────────────────────────────────────────────
+        for (const line of interactionLines) {
+            const s = line._strength || 0.5;
+            // Pulsing opacity
+            line.material.opacity = s * (0.25 + Math.sin(elapsed * 4 + line._qi * 0.5) * 0.15);
+
+            // Color shifts with spin state
+            if (p1 > 0.01) {
+                const lineColor = new THREE.Color();
+                lineColor.lerpColors(INTERACTION_COLOR, new THREE.Color(0xff4081), p1 * 0.5);
+                line.material.color.copy(lineColor);
+            }
+        }
+
+        // ── Substrate responds to temperature ──
+        if (substratePlane) {
+            const warmOp = 0.06 + noiseLevel * 0.08;
+            substratePlane.material.opacity = warmOp + Math.sin(elapsed * 0.5) * 0.01;
+            if (noiseLevel > 0.1) {
+                // Warm tint
+                substratePlane.material.color.setHex(
+                    noiseLevel > 0.5 ? 0xfce4ec : 0xe8eaf6
+                );
+            } else {
+                substratePlane.material.color.setHex(0xe8eaf6);
             }
         }
     }
 
-    function showQuantumDot(visible, fadeTime) {
-        if (!qdMarker) return;
-        const targetOpacity = visible ? 0.25 : 0.0;
-        // Simple immediate set (animation handled in update loop)
-        qdMarker.material.opacity = targetOpacity;
-        if (qdMarker._halo) {
-            qdMarker._halo.material.opacity = visible ? 0.06 : 0.0;
-        }
+    function showQuantumDot(visible) {
+        // Legacy compat
     }
 
-    return { init, update, showQuantumDot };
+    function getQubits() { return [...qubits]; }
+    function getQubitCount() { return qubits.length; }
+
+    return {
+        init, update, showQuantumDot,
+        addQubit, removeQubit, removeLastQubit, addQubitAtRandomSite,
+        getQubits, getQubitCount, rebuildInteractions
+    };
 })();

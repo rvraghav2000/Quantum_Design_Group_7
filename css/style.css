@@ -1056,3 +1056,89 @@ body {
     background: var(--md-outline);
     border-radius: 2px;
 }
+
+/* ─── Qubit Toolbar ──────────────────────────────────── */
+.qubit-toolbar {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--md-outline);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-2);
+    z-index: 50;
+}
+
+.qubit-tool-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: 1px solid var(--md-outline);
+    border-radius: var(--radius-xl);
+    background: var(--md-surface);
+    font: 500 13px var(--font);
+    color: var(--md-primary);
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.qubit-tool-btn:hover {
+    background: var(--md-primary-light);
+    border-color: var(--md-primary);
+    box-shadow: var(--shadow-1);
+}
+
+.qubit-tool-btn:active {
+    transform: scale(0.96);
+}
+
+.qubit-tool-btn.qubit-tool-delete {
+    color: var(--md-secondary);
+}
+
+.qubit-tool-btn.qubit-tool-delete:hover {
+    background: #fce8e6;
+    border-color: var(--md-secondary);
+}
+
+.tool-icon {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.tool-label {
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.qubit-count {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 4px 12px;
+    min-width: 56px;
+}
+
+.count-num {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--md-primary);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.count-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--md-on-surface-var);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}

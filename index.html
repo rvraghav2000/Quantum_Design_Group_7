@@ -109,7 +109,8 @@
                         </div>
                     </div>
 
-                    <p class="theory-instruction">🖱 Rotate and zoom the crystal to explore. When ready:</p>
+                    <p class="theory-instruction">🖱 Rotate and zoom the crystal to explore. Use the toolbar below to
+                        add/remove qubits. When ready:</p>
                     <button class="btn-primary" id="btn-next-1">Continue to Trap Building →</button>
                 </div>
             </section>
@@ -475,6 +476,21 @@
             <!-- Zoom hint -->
             <div class="zoom-hint" id="zoom-hint">
                 <span>Scroll to zoom · Drag to rotate</span>
+            </div>
+            <!-- Qubit Toolbar -->
+            <div class="qubit-toolbar" id="qubit-toolbar">
+                <button class="qubit-tool-btn" id="btn-add-qubit" title="Add Qubit">
+                    <span class="tool-icon">+</span>
+                    <span class="tool-label">Add Qubit</span>
+                </button>
+                <div class="qubit-count" id="qubit-count">
+                    <span class="count-num" id="qubit-count-num">12</span>
+                    <span class="count-label">Qubits</span>
+                </div>
+                <button class="qubit-tool-btn qubit-tool-delete" id="btn-delete-qubit" title="Remove Qubit">
+                    <span class="tool-icon">−</span>
+                    <span class="tool-label">Remove</span>
+                </button>
             </div>
         </div>
     </main>

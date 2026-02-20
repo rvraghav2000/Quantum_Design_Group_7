@@ -11,6 +11,7 @@
 
 const UI = (() => {
     const els = {};
+    let maxUnlockedStage = 1;
 
     function init() {
         // Cache DOM
@@ -92,6 +93,11 @@ const UI = (() => {
                 const v = parseFloat(slider.value);
                 if (valEl) valEl.innerHTML = v.toFixed(1) + '<small> mV</small>';
                 syncGateVoltages();
+                // Enable btn-next-2 when VCenter > 50mV
+                if (slider === els.sliderVc && v > 50) {
+                    const b2 = document.getElementById('btn-next-2');
+                    if (b2) b2.classList.remove('disabled');
+                }
             });
         };
         wireGate(els.sliderVl, els.vlVal);
@@ -160,11 +166,11 @@ const UI = (() => {
             });
         }
 
-        // Stage tab clicks
+        // Stage tab clicks — allow clicking any previously unlocked stage
         els.tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 const stage = parseInt(tab.getAttribute('data-stage'));
-                if (!tab.classList.contains('locked')) {
+                if (stage <= maxUnlockedStage) {
                     StageManager.goTo(stage);
                 }
             });
@@ -187,15 +193,17 @@ const UI = (() => {
 
     // ─── Stage Management ────
     function updateStageNav(unlocked) {
+        maxUnlockedStage = Math.max(maxUnlockedStage, unlocked);
         els.tabs.forEach(tab => {
             const s = parseInt(tab.getAttribute('data-stage'));
             tab.classList.remove('active', 'completed', 'locked');
             if (s < unlocked) tab.classList.add('completed');
             else if (s === unlocked) tab.classList.add('active');
+            else if (s <= maxUnlockedStage) tab.classList.add('completed');
             else tab.classList.add('locked');
         });
         els.connectors.forEach((conn, i) => {
-            if (conn) conn.style.width = (i + 1 < unlocked) ? '100%' : '0';
+            if (conn) conn.style.width = (i + 1 < maxUnlockedStage + 1) ? '100%' : '0';
         });
     }
 

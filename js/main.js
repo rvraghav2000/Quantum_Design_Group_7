@@ -17,7 +17,7 @@
     let prevMouse = { x: 0, y: 0 };
     let cameraTheta = Math.PI * 0.25;
     let cameraPhi = Math.PI * 0.35;
-    let cameraRadius = 14;
+    let cameraRadius = 20;
     let targetTheta = cameraTheta;
     let targetPhi = cameraPhi;
     let targetRadius = cameraRadius;
@@ -87,6 +87,7 @@
         try { UI.init(); } catch (e) { console.error('UI init:', e); }
 
         setupEvents(container);
+        wireQubitToolbar();
         animate();
         console.log('[main] Silicon Pulse v3 initialized');
     }
@@ -124,7 +125,7 @@
 
         container.addEventListener('wheel', e => {
             e.preventDefault();
-            targetRadius = Math.max(5, Math.min(35, targetRadius + e.deltaY * 0.015));
+            targetRadius = Math.max(5, Math.min(50, targetRadius + e.deltaY * 0.015));
         }, { passive: false });
 
         window.addEventListener('resize', () => {
@@ -161,11 +162,31 @@
             UI.showStageContent(stage);
         },
         goTo(stage) {
-            if (stage > currentStage || stage < 1) return;
+            if (stage < 1 || stage > 4) return;
             UI.showStageContent(stage);
             UI.highlightStageTab(stage);
         }
     };
+
+    // Qubit toolbar wiring
+    function wireQubitToolbar() {
+        const addBtn = document.getElementById('btn-add-qubit');
+        const delBtn = document.getElementById('btn-delete-qubit');
+        const countNum = document.getElementById('qubit-count-num');
+
+        if (addBtn) {
+            addBtn.addEventListener('click', () => {
+                Lattice.addQubitAtRandomSite();
+                if (countNum) countNum.textContent = Lattice.getQubitCount();
+            });
+        }
+        if (delBtn) {
+            delBtn.addEventListener('click', () => {
+                Lattice.removeLastQubit();
+                if (countNum) countNum.textContent = Lattice.getQubitCount();
+            });
+        }
+    }
 
     function animate() {
         requestAnimationFrame(animate);
