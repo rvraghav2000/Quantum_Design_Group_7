@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Silicon Pulse — Interactive Spin Explorer</title>
+    <meta name="description"
+        content="An interactive educational experience exploring how silicon qubit chips work — from crystal lattice to quantum control.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <!-- Cursor follower -->
+    <div id="cursor-glow" class="cursor-glow"></div>
+
+    <!-- Top Navigation -->
+    <header id="app-header">
+        <div class="header-brand">
+            <div class="brand-dot"></div>
+            <span class="brand-name">Silicon Pulse</span>
+        </div>
+        <nav id="stage-nav" class="stage-nav">
+            <button class="stage-tab active" data-stage="1">
+                <span class="stage-num">01</span>
+                <span class="stage-label">The Crystal</span>
+            </button>
+            <div class="stage-connector">
+                <div class="connector-fill" id="conn-1"></div>
+            </div>
+            <button class="stage-tab locked" data-stage="2">
+                <span class="stage-num">02</span>
+                <span class="stage-label">Building the Trap</span>
+            </button>
+            <div class="stage-connector">
+                <div class="connector-fill" id="conn-2"></div>
+            </div>
+            <button class="stage-tab locked" data-stage="3">
+                <span class="stage-num">03</span>
+                <span class="stage-label">Capturing Electrons</span>
+            </button>
+            <div class="stage-connector">
+                <div class="connector-fill" id="conn-3"></div>
+            </div>
+            <button class="stage-tab locked" data-stage="4">
+                <span class="stage-num">04</span>
+                <span class="stage-label">Spin Control</span>
+            </button>
+        </nav>
+        <div class="header-meta">
+            <span class="meta-chip" id="header-temp">20 mK</span>
+            <span class="meta-chip" id="header-bfield">1.0 T</span>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <main id="app-main">
+        <!-- Left Sidebar: Theory & Controls -->
+        <aside id="sidebar" class="sidebar">
+
+            <!-- ═══════════ Stage 1: The Crystal ═══════════ -->
+            <section class="stage-content" id="stage-1-content" data-stage="1">
+                <div class="theory-card">
+                    <h2>The Silicon Crystal</h2>
+                    <p class="theory-lead">Everything starts with the world's most perfect crystal.</p>
+                    <p>Silicon-28 (<sup>28</sup>Si) is isotopically purified to remove magnetic noise.
+                        Unlike natural silicon — which contains ~4.7% <sup>29</sup>Si with nuclear spin — pure
+                        <sup>28</sup>Si
+                        creates a <strong>"magnetically quiet"</strong> environment where quantum states survive far
+                        longer.
+                    </p>
+
+                    <div class="theory-detail">
+                        <button class="detail-toggle" data-target="crystal-detail">
+                            <span class="detail-icon">ⓘ</span>
+                            Why isotopic purity matters
+                        </button>
+                        <div class="detail-panel" id="crystal-detail">
+                            <p><sup>29</sup>Si atoms have nuclear spin I=½, creating random magnetic fields that
+                                dephase electron spins. In enriched <sup>28</sup>Si (I=0), coherence times T₂ exceed
+                                <strong>28 milliseconds</strong> — long enough for thousands of quantum operations.
+                            </p>
+                            <div class="detail-stat">
+                                <span class="stat-value">5.43 Å</span>
+                                <span class="stat-label">lattice constant</span>
+                            </div>
+                            <div class="detail-stat">
+                                <span class="stat-value">99.99%</span>
+                                <span class="stat-label"><sup>28</sup>Si purity</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="theory-detail">
+                        <button class="detail-toggle" data-target="diamond-detail">
+                            <span class="detail-icon">ⓘ</span>
+                            Diamond cubic structure
+                        </button>
+                        <div class="detail-panel" id="diamond-detail">
+                            <p>Silicon crystallizes in the <em>diamond cubic</em> structure — two interlocking FCC
+                                lattices.
+                                Each atom is tetrahedrally bonded to 4 neighbors. This regular geometry creates
+                                precise, repeatable locations for quantum dots.</p>
+                        </div>
+                    </div>
+
+                    <p class="theory-instruction">🖱 Rotate and zoom the crystal to explore. When ready:</p>
+                    <button class="btn-primary" id="btn-next-1">Continue to Trap Building →</button>
+                </div>
+            </section>
+
+            <!-- ═══════════ Stage 2: Building the Trap ═══════════ -->
+            <section class="stage-content hidden" id="stage-2-content" data-stage="2">
+                <div class="theory-card">
+                    <h2>Building the Trap</h2>
+                    <p class="theory-lead">Metal gates create electric fields that confine a single electron.</p>
+                    <p>On top of the silicon crystal, nano-scale metal electrodes (gates) apply voltages that
+                        shape the electrostatic potential below. By tuning three gates, you sculpt a tiny
+                        <strong>quantum dot</strong> — a potential well small enough to hold exactly one electron.
+                    </p>
+
+                    <div class="theory-detail">
+                        <button class="detail-toggle" data-target="gate-detail">
+                            <span class="detail-icon">ⓘ</span>
+                            How gate voltages work
+                        </button>
+                        <div class="detail-panel" id="gate-detail">
+                            <p>Positive voltage on the center gate creates a <strong>potential well</strong> (electron
+                                trap).
+                                The left and right gates act as barriers, confining the electron laterally. The
+                                resulting potential is:</p>
+                            <div class="formula">U(x) = −V<sub>C</sub> · e<sup>−x²/σ²</sup> + V<sub>L</sub>(x+d)² +
+                                V<sub>R</sub>(x−d)²</div>
+                        </div>
+                    </div>
+
+                    <div class="control-section">
+                        <h3>Gate Voltages</h3>
+                        <div class="slider-group">
+                            <div class="slider-row">
+                                <label>V<sub>Left</sub></label>
+                                <input type="range" id="slider-vl" min="0" max="100" value="0" step="0.1">
+                                <span class="slider-val" id="vl-value">0.0<small> mV</small></span>
+                            </div>
+                            <div class="slider-row">
+                                <label>V<sub>Center</sub></label>
+                                <input type="range" id="slider-vc" min="0" max="100" value="0" step="0.1"
+                                    class="slider-accent">
+                                <span class="slider-val" id="vc-value">0.0<small> mV</small></span>
+                            </div>
+                            <div class="slider-row">
+                                <label>V<sub>Right</sub></label>
+                                <input type="range" id="slider-vr" min="0" max="100" value="0" step="0.1">
+                                <span class="slider-val" id="vr-value">0.0<small> mV</small></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Potential Well Graph -->
+                    <div class="graph-card">
+                        <span class="graph-label">Potential Energy U(x)</span>
+                        <canvas id="potential-canvas" width="560" height="200"></canvas>
+                    </div>
+
+                    <p class="theory-instruction">⚡ Increase V<sub>Center</sub> to form a deep potential well.</p>
+                    <button class="btn-primary disabled" id="btn-next-2">Continue to Electron Capture →</button>
+                </div>
+            </section>
+
+            <!-- ═══════════ Stage 3: Capturing Electrons ═══════════ -->
+            <section class="stage-content hidden" id="stage-3-content" data-stage="3">
+                <div class="theory-card">
+                    <h2>Capturing an Electron</h2>
+                    <p class="theory-lead">When the potential well is deep enough, a single electron is confined.</p>
+                    <p>The trapped electron's wavefunction |ψ|² — its probability density — is localized inside the
+                        quantum dot.
+                        This is your <strong>qubit</strong>. Its spin (↑ or ↓) encodes quantum information as |0⟩ and
+                        |1⟩.</p>
+
+                    <div class="theory-detail">
+                        <button class="detail-toggle" data-target="qubit-detail">
+                            <span class="detail-icon">ⓘ</span>
+                            Why spin makes a good qubit
+                        </button>
+                        <div class="detail-panel" id="qubit-detail">
+                            <p>Electron spin in silicon has <strong>exceptionally long coherence times</strong> because
+                                <sup>28</sup>Si has no nuclear magnetic moment. The two spin states |↑⟩ and |↓⟩
+                                are split by the Zeeman energy ΔE = gμ<sub>B</sub>B, where g ≈ 2.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Electron Status -->
+                    <div class="status-card" id="electron-status">
+                        <div class="status-dot" id="trap-dot"></div>
+                        <span class="status-label" id="trap-label">Electron Unbound</span>
+                    </div>
+
+                    <div class="control-section">
+                        <h3>Environment</h3>
+                        <div class="slider-group">
+                            <div class="slider-row">
+                                <label>Temperature</label>
+                                <input type="range" id="slider-temp" min="1" max="4000" value="20" step="1">
+                                <span class="slider-val" id="temp-value">20<small> mK</small></span>
+                            </div>
+                        </div>
+
+                        <div class="theory-detail" style="margin-top:12px">
+                            <button class="detail-toggle" data-target="temp-detail">
+                                <span class="detail-icon">ⓘ</span>
+                                Why ultra-cold temperatures?
+                            </button>
+                            <div class="detail-panel" id="temp-detail">
+                                <p>At room temperature (~300 K), thermal energy k<sub>B</sub>T ≈ 26 meV dwarfs the
+                                    qubit energy splitting ΔE = gμ<sub>B</sub>B ≈ 0.116 meV at 1T. Cooling to ~20 mK
+                                    ensures k<sub>B</sub>T ≈ 0.0017 meV, so thermal fluctuations cannot flip the spin.
+                                </p>
+                                <p>The ratio ΔE/k<sub>B</sub>T determines coherence: at 20 mK it's ~67x, at 1K it's
+                                    ~1.3x.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Physics Readouts -->
+                    <div class="control-section">
+                        <h3>Physics Parameters</h3>
+                        <div class="readout-row">
+                            <div class="readout">
+                                <span class="readout-label">T₁ (relaxation)</span>
+                                <span class="readout-val" id="t1-value">6.0 s</span>
+                            </div>
+                            <div class="readout">
+                                <span class="readout-label">T₂ (Hahn echo)</span>
+                                <span class="readout-val" id="t2-value">28.0 ms</span>
+                            </div>
+                        </div>
+                        <div class="readout-row">
+                            <div class="readout">
+                                <span class="readout-label">T₂* (Ramsey)</span>
+                                <span class="readout-val" id="t2star-value">120 μs</span>
+                            </div>
+                            <div class="readout">
+                                <span class="readout-label">ω<sub>L</sub></span>
+                                <span class="readout-val" id="larmor-value">28.02 GHz</span>
+                            </div>
+                        </div>
+                        <div class="readout-row">
+                            <div class="readout">
+                                <span class="readout-label">ΔE (Zeeman)</span>
+                                <span class="readout-val" id="zeeman-value">0.116 meV</span>
+                            </div>
+                            <div class="readout">
+                                <span class="readout-label">k<sub>B</sub>T</span>
+                                <span class="readout-val" id="kbt-value">0.002 meV</span>
+                            </div>
+                        </div>
+                        <div class="readout-row">
+                            <div class="readout">
+                                <span class="readout-label">P<sub>thermal</sub>(|1⟩)</span>
+                                <span class="readout-val" id="thermal-value">0.0000%</span>
+                            </div>
+                            <div class="readout">
+                                <span class="readout-label">Coherence</span>
+                                <span class="readout-val" id="hud-t2">T₂ = 28.0 ms</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <p class="theory-instruction">🎯 Fine-tune the gates until the electron is trapped. Raise
+                        temperature to see decoherence.</p>
+                    <button class="btn-primary disabled" id="btn-next-3">Continue to Spin Control →</button>
+                </div>
+            </section>
+
+            <!-- ═══════════ Stage 4: Spin Control ═══════════ -->
+            <section class="stage-content hidden" id="stage-4-content" data-stage="4">
+                <div class="theory-card">
+                    <h2>Spin Control</h2>
+                    <p class="theory-lead">Microwave pulses rotate the spin — this is quantum computing.</p>
+                    <p>The Hamiltonian H = −½γ<strong>B</strong>·<strong>σ</strong> governs the electron's spin
+                        precession.
+                        A static magnetic field B<sub>z</sub> splits the energy levels. A resonant microwave pulse
+                        at the Larmor frequency drives <strong>Rabi oscillations</strong> between |0⟩ and |1⟩.</p>
+
+                    <div class="theory-detail">
+                        <button class="detail-toggle" data-target="rabi-detail">
+                            <span class="detail-icon">ⓘ</span>
+                            What are Rabi oscillations?
+                        </button>
+                        <div class="detail-panel" id="rabi-detail">
+                            <p>When a microwave pulse at frequency ω<sub>L</sub> = γB is applied, the spin
+                                coherently oscillates between |0⟩ and |1⟩. A <strong>π-pulse</strong> flips the spin
+                                completely;
+                                a <strong>π/2-pulse</strong> creates an equal superposition — the starting point
+                                for quantum algorithms.</p>
+                        </div>
+                    </div>
+
+                    <!-- Spin State -->
+                    <div class="spin-display">
+                        <div class="spin-row">
+                            <span class="ket-label">|0⟩</span>
+                            <div class="prob-track">
+                                <div class="prob-fill prob-0" id="prob-bar-0"></div>
+                            </div>
+                            <span class="prob-text" id="prob-0-text">100%</span>
+                        </div>
+                        <div class="spin-row">
+                            <span class="ket-label">|1⟩</span>
+                            <div class="prob-track">
+                                <div class="prob-fill prob-1" id="prob-bar-1"></div>
+                            </div>
+                            <span class="prob-text" id="prob-1-text">0%</span>
+                        </div>
+                    </div>
+
+                    <div class="readout-row four-col">
+                        <div class="readout">
+                            <span class="readout-label">θ</span>
+                            <span class="readout-val" id="theta-value">0π</span>
+                        </div>
+                        <div class="readout">
+                            <span class="readout-label">φ</span>
+                            <span class="readout-val" id="phi-value">0π</span>
+                        </div>
+                        <div class="readout">
+                            <span class="readout-label">P(|1⟩)</span>
+                            <span class="readout-val" id="p1-value">0.0000</span>
+                        </div>
+                        <div class="readout">
+                            <span class="readout-label">B<sub>z</sub></span>
+                            <span class="readout-val" id="bfield-value">1.00 T</span>
+                        </div>
+                    </div>
+
+                    <!-- Pulse Button -->
+                    <div class="pulse-area">
+                        <button id="pulse-button" class="pulse-btn" disabled>
+                            <span class="pulse-btn-label">Hold to Pulse</span>
+                            <svg class="pulse-ring-svg" viewBox="0 0 120 120">
+                                <circle class="ring-bg" cx="60" cy="60" r="54" />
+                                <circle class="ring-fg" cx="60" cy="60" r="54" id="pulse-ring-fg" />
+                            </svg>
+                        </button>
+                        <div class="pulse-legend">
+                            <span>0</span>
+                            <span>π/2</span>
+                            <span>π</span>
+                        </div>
+                    </div>
+
+                    <div class="control-section">
+                        <div class="slider-row">
+                            <label>B<sub>z</sub> field</label>
+                            <input type="range" id="slider-bfield" min="0.1" max="5" value="1" step="0.01">
+                            <span class="slider-val" id="bfield-slider-val">1.00<small> T</small></span>
+                        </div>
+                    </div>
+
+                    <div class="readout-row">
+                        <div class="readout">
+                            <span class="readout-label">Ω<sub>Rabi</sub></span>
+                            <span class="readout-val" id="rabi-value">0.0 MHz</span>
+                        </div>
+                        <div class="readout">
+                            <span class="readout-label">ω<sub>Larmor</sub></span>
+                            <span class="readout-val" id="larmor-value-2">28.02 GHz</span>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════ Quantum Computing I/O ═══════════ -->
+                    <div class="qc-section" id="qc-panel">
+                        <h3>Quantum Computing</h3>
+
+                        <div class="qc-gate-row">
+                            <button class="qc-gate-btn" data-gate="X">X</button>
+                            <button class="qc-gate-btn" data-gate="Y">Y</button>
+                            <button class="qc-gate-btn" data-gate="Z">Z</button>
+                            <button class="qc-gate-btn" data-gate="H">H</button>
+                            <button class="qc-gate-btn" data-gate="S">S</button>
+                            <button class="qc-gate-btn" data-gate="T">T</button>
+                        </div>
+                        <div class="qc-gate-row">
+                            <button class="qc-gate-btn qc-rot" data-gate="Rx"
+                                data-param="1.5707963">R<sub>x</sub>(π/2)</button>
+                            <button class="qc-gate-btn qc-rot" data-gate="Ry"
+                                data-param="1.5707963">R<sub>y</sub>(π/2)</button>
+                            <button class="qc-gate-btn qc-rot" data-gate="Rz"
+                                data-param="1.5707963">R<sub>z</sub>(π/2)</button>
+                        </div>
+
+                        <div class="qc-actions">
+                            <button class="qc-action-btn qc-measure" id="qc-measure-btn">📐 Measure</button>
+                            <button class="qc-action-btn qc-reset" id="qc-reset-btn">↺ Reset</button>
+                        </div>
+
+                        <!-- Circuit input -->
+                        <div class="qc-circuit-input-row">
+                            <input type="text" id="qc-circuit-input" class="qc-input" placeholder="e.g. H X MEASURE"
+                                spellcheck="false">
+                            <button class="qc-run-btn" id="qc-run-btn">▶ Run</button>
+                        </div>
+
+                        <!-- Circuit diagram -->
+                        <div class="qc-circuit-display" id="qc-circuit">
+                            <span class="qc-wire-label">|0⟩ ──</span>
+                        </div>
+
+                        <!-- State vector output -->
+                        <div class="qc-state-output" id="qc-state-output">
+                            <div class="qc-sv-row">
+                                <span class="qc-sv-label">α (|0⟩):</span>
+                                <span class="qc-sv-val">1.0000 + 0.0000i</span>
+                            </div>
+                            <div class="qc-sv-row">
+                                <span class="qc-sv-label">β (|1⟩):</span>
+                                <span class="qc-sv-val">0.0000 + 0.0000i</span>
+                            </div>
+                        </div>
+
+                        <!-- Operation history -->
+                        <div class="qc-history" id="qc-history"></div>
+                    </div>
+
+                    <div class="theory-detail">
+                        <button class="detail-toggle" data-target="decoherence-detail">
+                            <span class="detail-icon">ⓘ</span>
+                            Decoherence: the enemy of qubits
+                        </button>
+                        <div class="detail-panel" id="decoherence-detail">
+                            <p>No qubit is perfectly isolated. Over time, interactions with the environment
+                                cause <strong>decoherence</strong> — the quantum state "leaks" into a classical
+                                mixture.
+                                T₁ governs <em>energy relaxation</em> (spin flips), while T₂ governs
+                                <em>dephasing</em> (loss of phase coherence). Always T₂ ≤ 2T₁.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="state-formula" id="footer-state-label">|ψ⟩ = |0⟩</div>
+
+                    <!-- Audio -->
+                    <div class="toggle-row">
+                        <span class="toggle-label">Audio feedback</span>
+                        <button id="audio-toggle" class="toggle-btn"><span class="toggle-knob"></span></button>
+                    </div>
+                </div>
+            </section>
+        </aside>
+
+        <!-- 3D Viewport -->
+        <div id="viewport-container">
+            <div id="three-canvas-container"></div>
+            <!-- Viewport HUD -->
+            <div id="viewport-hud">
+                <div class="hud-tl">
+                    <span class="hud-tag"><sup>28</sup>Si — Isotopically Pure</span>
+                </div>
+                <div class="hud-tr">
+                    <span class="hud-tag" id="hud-fps">60 fps</span>
+                </div>
+                <div class="hud-bl">
+                    <span class="hud-tag">Diamond Cubic · a = 5.43 Å</span>
+                </div>
+                <div class="hud-br">
+                    <span class="hud-tag" id="hud-coherence">T₂ = 28.0 ms</span>
+                </div>
+            </div>
+            <!-- Zoom hint -->
+            <div class="zoom-hint" id="zoom-hint">
+                <span>Scroll to zoom · Drag to rotate</span>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="js/spinPhysics.js"></script>
+    <script src="js/decoherence.js"></script>
+    <script src="js/audio.js"></script>
+    <script>
+        // Compatibility shims
+        const AudioFeedback = {
+            isEnabled: () => AudioEngine.getEnabled(),
+            toggle: () => AudioEngine.toggle(),
+            updateSpinTone: (state) => { if (state) AudioEngine.updateSpinState(state.probUp || 0); },
+            updateNoise: (level) => AudioEngine.updateNoise(level),
+            playPulseStart: () => AudioEngine.playPulseStart(),
+            playGateTick: () => AudioEngine.playGateTick(),
+            playTrapped: () => AudioEngine.playTrapped()
+        };
+        // SpinPhysics.getState() aggregator
+        SpinPhysics.getState = function () {
+            return {
+                probUp: SpinPhysics.getP1(),
+                probDown: SpinPhysics.getP0(),
+                theta: SpinPhysics.getBlochAngles().theta,
+                phi: SpinPhysics.getBlochAngles().phi
+            };
+        };
+    </script>
+    <script src="js/lattice.js"></script>
+    <script src="js/quantumDot.js"></script>
+    <script src="js/pulseController.js"></script>
+    <script src="js/quantumComputing.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>
