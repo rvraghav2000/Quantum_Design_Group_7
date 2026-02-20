@@ -88,6 +88,7 @@
 
         setupEvents(container);
         wireQubitToolbar();
+        wireHandTracking();
         animate();
         console.log('[main] Silicon Pulse v3 initialized');
     }
@@ -188,6 +189,60 @@
         }
     }
 
+    // Hand Tracking wiring
+    function wireHandTracking() {
+        if (typeof HandTracking === 'undefined') return;
+
+        HandTracking.init({
+            onRotate: (dx, dy) => {
+                targetTheta += dx;
+                targetPhi = Math.max(0.1, Math.min(Math.PI - 0.1, targetPhi + dy));
+            },
+            onTemperatureChange: (tempMK) => {
+                // Update slider UI
+                const slider = document.getElementById('slider-temp');
+                const valEl = document.querySelector('#temp-val') || document.querySelector('[data-readout="temp"]');
+                if (slider) {
+                    slider.value = tempMK;
+                    slider.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                Decoherence.setTemperature(tempMK);
+                // Update header chip
+                const headerTemp = document.getElementById('header-temp');
+                if (headerTemp) headerTemp.textContent = tempMK + ' mK';
+            },
+            onBFieldChange: (bField) => {
+                // Update slider UI
+                const slider = document.getElementById('slider-bfield');
+                if (slider) {
+                    slider.value = bField;
+                    slider.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                SpinPhysics.setBField(bField);
+                // Update header chip
+                const headerB = document.getElementById('header-bfield');
+                if (headerB) headerB.textContent = bField.toFixed(1) + ' T';
+            }
+        });
+
+        // Toggle button
+        const btn = document.getElementById('btn-hand-tracking');
+        const overlay = document.getElementById('hand-overlay');
+        if (btn) {
+            btn.addEventListener('click', async () => {
+                if (HandTracking.isEnabled()) {
+                    HandTracking.stop();
+                    if (overlay) overlay.style.display = 'none';
+                    btn.classList.remove('active');
+                } else {
+                    if (overlay) overlay.style.display = 'flex';
+                    btn.classList.add('active');
+                    await HandTracking.start();
+                }
+            });
+        }
+    }
+
     function animate() {
         requestAnimationFrame(animate);
         const dt = Math.min(clock.getDelta(), 0.05);
@@ -202,15 +257,15 @@
             fpsTime = 0;
         }
 
-        // Smooth orbit
-        cameraTheta += (targetTheta - cameraTheta) * 0.08;
-        cameraPhi += (targetPhi - cameraPhi) * 0.08;
-        cameraRadius += (targetRadius - cameraRadius) * 0.08;
+        // Smooth orbit (higher factor for responsiveness, lower for smoothness)
+        cameraTheta += (targetTheta - cameraTheta) * 0.05;
+        cameraPhi += (targetPhi - cameraPhi) * 0.05;
+        cameraRadius += (targetRadius - cameraRadius) * 0.05;
 
         // Subtle parallax
         if (!isDragging) {
-            parallax.x += (cursorNorm.x * 0.2 - parallax.x) * 0.03;
-            parallax.y += (cursorNorm.y * 0.15 - parallax.y) * 0.03;
+            parallax.x += (cursorNorm.x * 0.2 - parallax.x) * 0.02;
+            parallax.y += (cursorNorm.y * 0.15 - parallax.y) * 0.02;
         }
 
         updateCamera();

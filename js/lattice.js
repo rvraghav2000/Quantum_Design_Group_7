@@ -13,9 +13,9 @@
 const Lattice = (() => {
     const SCALE = 1.6;
     const GRID = 4;
-    const ATOM_RADIUS = 0.018; // tiny dots
+    const ATOM_RADIUS = 0.022; // small but visible dots
     const FALLOFF_RADIUS = 5.5;
-    const QUBIT_RADIUS = 0.22;
+    const QUBIT_RADIUS = 0.24;
     const INTERACTION_DECAY = 2.5;
 
     let group;
@@ -30,13 +30,13 @@ const Lattice = (() => {
     const interactionLines = [];
     const QUBIT_SITES = [];
 
-    // Colors
-    const ATOM_COLOR = 0x90a4ae;
-    const BOND_COLOR = 0xcfd8dc;
-    const QUBIT_COLOR_0 = new THREE.Color(0x448aff); // |0⟩ blue
-    const QUBIT_COLOR_1 = new THREE.Color(0xff5252); // |1⟩ red
-    const QUBIT_GLOW_COLOR = new THREE.Color(0x82b1ff);
-    const INTERACTION_COLOR = new THREE.Color(0x00e5ff);
+    // Colors — high contrast
+    const ATOM_COLOR = 0xb0bec5; // brighter silver
+    const BOND_COLOR = 0xd6dee3;
+    const QUBIT_COLOR_0 = new THREE.Color(0x00e676); // |0⟩ vivid emerald green
+    const QUBIT_COLOR_1 = new THREE.Color(0xff1744); // |1⟩ hot red/magenta
+    const QUBIT_GLOW_COLOR = new THREE.Color(0x69f0ae); // green glow
+    const INTERACTION_COLOR = new THREE.Color(0x40c4ff);
 
     let scene_ref;
     let currentDecoState = null;
@@ -91,7 +91,7 @@ const Lattice = (() => {
             const mat = new THREE.MeshBasicMaterial({
                 color: ATOM_COLOR,
                 transparent: true,
-                opacity: alpha * 0.9
+                opacity: alpha * 0.95
             });
             const mesh = new THREE.Mesh(atomGeo, mat);
             mesh.position.set(p.x, p.y, p.z);
@@ -131,7 +131,7 @@ const Lattice = (() => {
                     const bMat = new THREE.MeshBasicMaterial({
                         color: BOND_COLOR,
                         transparent: true,
-                        opacity: alpha * 0.25
+                        opacity: alpha * 0.35
                     });
                     const bond = new THREE.Mesh(bondGeo, bMat);
 

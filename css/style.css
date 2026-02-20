@@ -1142,3 +1142,83 @@ body {
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
+/* ─── Hand Tracking Overlay ──────────────────────────── */
+.hand-overlay {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    border: 1px solid var(--md-outline);
+    border-radius: var(--radius-m);
+    box-shadow: var(--shadow-2);
+    z-index: 100;
+    pointer-events: none;
+    animation: slideInRight 0.3s ease-out;
+}
+
+#hand-canvas {
+    width: 100%;
+    height: auto;
+    border-radius: var(--radius-s);
+    background: #000;
+    display: block;
+}
+
+.gesture-status {
+    padding: 6px 12px;
+    background: var(--md-primary-light);
+    color: var(--md-primary);
+    border-radius: var(--radius-xl);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.gesture-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: var(--radius-s);
+}
+
+.gesture-legend span {
+    font-size: 11px;
+    color: var(--md-on-surface-var);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 32px;
+    background: var(--md-outline);
+    margin: 0 4px;
+}
+
+.qubit-tool-btn.active {
+    background: var(--md-primary);
+    color: white;
+    border-color: var(--md-primary);
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}

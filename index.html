@@ -491,12 +491,30 @@
                     <span class="tool-icon">−</span>
                     <span class="tool-label">Remove</span>
                 </button>
+                <div class="toolbar-divider"></div>
+                <button class="qubit-tool-btn qubit-tool-camera" id="btn-hand-tracking" title="Hand Gesture Control">
+                    <span class="tool-icon">✋</span>
+                    <span class="tool-label">Gestures</span>
+                </button>
+            </div>
+            <!-- Hand Tracking Camera Overlay -->
+            <div class="hand-overlay" id="hand-overlay" style="display:none;">
+                <canvas id="hand-canvas" width="320" height="240"></canvas>
+                <div class="gesture-status" id="gesture-status">✋ Show hands</div>
+                <div class="gesture-legend">
+                    <span>🤏 Pinch: Rotate</span>
+                    <span>🌡️ Left hand: Temp</span>
+                    <span>🧲 Right hand: Bz</span>
+                </div>
             </div>
         </div>
     </main>
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- MediaPipe Hands -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
     <script src="js/spinPhysics.js"></script>
     <script src="js/decoherence.js"></script>
     <script src="js/audio.js"></script>
@@ -525,6 +543,7 @@
     <script src="js/quantumDot.js"></script>
     <script src="js/pulseController.js"></script>
     <script src="js/quantumComputing.js"></script>
+    <script src="js/handTracking.js"></script>
     <script src="js/ui.js"></script>
     <script src="js/main.js"></script>
 </body>
